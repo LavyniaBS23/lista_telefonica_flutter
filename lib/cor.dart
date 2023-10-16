@@ -1,6 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
-class Cor{
+class Cor {
   static MaterialColor createMaterialColor(Color color) {
     List<int> strengths = <int>[
       50,
@@ -27,5 +29,19 @@ class Cor{
       );
     }
     return MaterialColor(color.value, swatch);
+  }
+
+  static Color gerarCorAleatoria() {
+    Random random = Random();
+    return Color.fromRGBO(
+        random.nextInt(256), random.nextInt(256), random.nextInt(256), 1);
+  }
+
+  static String colorToString(Color cor) {
+    return cor.value.toRadixString(16).padLeft(8, '0');
+  }
+
+  static Color stringToColor(String value) {
+    return Color(int.parse(value, radix: 16));
   }
 }

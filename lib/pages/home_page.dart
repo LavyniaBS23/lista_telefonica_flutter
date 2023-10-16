@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:lista_telefonica/cor.dart';
+import 'package:lista_telefonica/mascaras.dart';
 import 'package:lista_telefonica/models/contatos_model.dart';
 import 'package:lista_telefonica/pages/contato_detalhes_page.dart';
 import 'package:lista_telefonica/pages/contato_page.dart';
@@ -18,8 +20,10 @@ class _HomePageState extends State<HomePage> {
   ContatosBack4AppRepository contatoRepository = ContatosBack4AppRepository();
   var _contatos = ContatosModel([]);
   ContatosModel contatosFiltrados = ContatosModel([]);
+  var mascaras = Mascaras();
 
   bool favoritos = false;
+  bool ordem = false;
 
   @override
   void initState() {
@@ -29,7 +33,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void obterContatos() async {
-    _contatos = await contatoRepository.obterContatos(favoritos);
+    _contatos = await contatoRepository.obterContatos(favoritos, ordem);
     setState(() {});
   }
 
@@ -54,40 +58,75 @@ class _HomePageState extends State<HomePage> {
     return SafeArea(
         child: Scaffold(
       appBar: AppBar(
-        //title: const Text("Contatos"),
         actions: [
           Expanded(
+            //width: 400,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-              child: TextField(
-                controller: searchController,
-                onChanged: (value) {
-                  pesquisarContatos(value);
-                },
-                decoration: InputDecoration(
-                    hintText: "Pesquisar por nome ou número",
-                    hintStyle: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 14,
-                    ),
-                    filled: true, // Preenche o fundo com a cor definida
-                    fillColor:
-                        Colors.grey[200], // Cor de preenchimento de fundo
-                    border: OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(25.0), // Arredondar as bordas
-                      borderSide: BorderSide.none, // Remove a borda padrão
-                    ),
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: IconButton(
-                      icon: const Icon(
-                          Icons.clear), // Ícone para limpar o campo de pesquisa
-                      onPressed: () {
-                        searchController.clear(); // Limpa o campo de pesquisa
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: searchController,
+                      onChanged: (value) {
+                        pesquisarContatos(value);
                       },
-                    )),
-                cursorColor: Colors.black,
-
+                      decoration: InputDecoration(
+                          hintText: "Pesquisar por nome ou número",
+                          contentPadding: const EdgeInsets.only(bottom: 2),
+                          hintStyle: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 18,
+                          ),
+                          filled: true, // Preenche o fundo com a cor definida
+                          fillColor:
+                              Colors.grey[200], // Cor de preenchimento de fundo
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(
+                                25.0), // Arredondar as bordas
+                            borderSide:
+                                BorderSide.none, // Remove a borda padrão
+                          ),
+                          prefixIcon: Icon(Icons.search, color: Cor.createMaterialColor(
+                              const Color(0xFFD1C4E9)),),
+                          suffixIcon: IconButton(
+                            icon: Icon(Icons
+                                .clear, color: Cor.createMaterialColor(const Color(0xFFD1C4E9))), // Ícone para limpar o campo de pesquisa
+                            onPressed: () {
+                              searchController
+                                  .clear(); // Limpa o campo de pesquisa
+                            },
+                          )),
+                      cursorColor: Colors.black,
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      ordem = !ordem;
+                      _contatos = await contatoRepository.obterContatos(favoritos, ordem);
+                      setState(() {});
+                    },
+                    icon: Icon(
+                      ordem ? Icons.arrow_downward : Icons.arrow_upward,
+                      color: Cor.createMaterialColor(
+                          const Color(0xFFD1C4E9)), // Cor do ícone
+                      size: 25, // Tamanho do ícone
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () async {
+                      ordem = !favoritos;
+                      _contatos = await contatoRepository.obterContatos(favoritos, ordem);
+                      setState(() {});
+                    },
+                    icon: Icon(
+                      favoritos ? Icons.star : Icons.star_outline,
+                      color: Cor.createMaterialColor(
+                          const Color(0xFFFFF176)), // Cor do ícone
+                      size: 25, // Tamanho do ícone
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -135,27 +174,41 @@ class _HomePageState extends State<HomePage> {
           leading: ClipOval(
             child: contato.foto != ""
                 ? Container(
-                    color: Colors.blue,
-                    width: 40,
-                    height: 40,
+                    width: 55,
+                    height: 55,
+                    child: Image.file(
+                      File(contato.foto),
+                      fit: BoxFit.cover, 
+                        width: 55,
+                        height: 55,
+                      ),
+                  ):
+                  Container(
+                    color: Cor.stringToColor(contato.cor),
+                    width: 55,
+                    height: 55,
                     child: Center(
                       child: Text(
                         primeiraLetra,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          fontSize: 20
                         ),
                       ),
                     ),
                   )
-                : Container(
-                    width: 40,
-                    height: 40,
-                    child: Text("Teste") /*Image.file(File(contato.foto))*/,
-                  ),
+                
           ),
-          title: Text("${contato.nome} ${contato.sobrenome}"),
-          subtitle: Text(contato.numero.toString()),
+          title: Text(
+            "${contato.nome} ${contato.sobrenome}",
+            style: const TextStyle(
+              fontSize: 18
+            ),
+          ),
+          subtitle: Text(
+            contato.marcadorNumero == 1 ? mascaras.mascaraTelefone.maskText(contato.numero.toString()) : mascaras.mascaraCelular.maskText(contato.numero.toString())
+            ),
         );
       },
     );

@@ -30,6 +30,7 @@ class ContatoModel {
   String email = "";
   String foto = "";
   bool favorito = false;
+  String cor = "";
 
   ContatoModel(
       this.objectId,
@@ -41,7 +42,7 @@ class ContatoModel {
       this.sobrenome,
       this.email,
       this.foto,
-      this.favorito);
+      this.favorito, this.cor);
   ContatoModel.vazio();
 
   ContatoModel.fromJson(Map<String, dynamic> json) {
@@ -55,6 +56,7 @@ class ContatoModel {
     email = json['email'];
     foto = json['foto'];
     favorito = json['favorito'];
+    cor = json['cor'];
   }
 
   Map<String, dynamic> toJson() {
@@ -69,6 +71,7 @@ class ContatoModel {
     data['email'] = email;
     data['foto'] = foto;
     data['favorito'] = favorito;
+    data['cor'] = cor;
     return data;
   }
 
@@ -81,6 +84,7 @@ class ContatoModel {
     data['email'] = email;
     data['foto'] = foto;
     data['favorito'] = favorito;
+    data['cor'] = cor;
     return data;
   }
 

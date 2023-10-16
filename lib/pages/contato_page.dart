@@ -1,8 +1,8 @@
 import 'dart:io';
 
-import 'package:brasil_fields/brasil_fields.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:lista_telefonica/mascaras.dart';
 import 'package:lista_telefonica/models/contatos_model.dart';
 import 'package:lista_telefonica/cor.dart';
 import 'package:gallery_saver/gallery_saver.dart';
@@ -10,7 +10,6 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:lista_telefonica/pages/home_page.dart';
 import 'package:lista_telefonica/repositories/contatos_back4app_repository.dart';
-import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:path/path.dart';
 
@@ -32,10 +31,14 @@ class _ContatoPageState extends State<ContatoPage> {
   TextEditingController emailController = TextEditingController(text: "");
 
   XFile? image;
-  String _selectedItem = 'Selecione';
+  String _selectedItem = 'Tipo';
   bool edit = false;
   ContatosBack4AppRepository contatoRepository = ContatosBack4AppRepository();
-  var contatoModel = ContatoModel("", "", "", "", 0, 0, "", "", "", false);
+  var contatoModel = ContatoModel("", "", "", "", 0, 0, "", "", "", false, "");
+  bool isPhoneNumberEnabled = false;
+  String erro = "";
+
+  var mascaras = Mascaras();
 
   @override
   void initState() {
@@ -49,15 +52,17 @@ class _ContatoPageState extends State<ContatoPage> {
       marcadorNumeroController.text = widget.contato!.marcadorNumero.toString();
       numeroController.text = widget.contato!.numero.toString();
       emailController.text = widget.contato!.email;
-      
+
       if (widget.contato!.marcadorNumero == 1) {
         // Telefone
         _selectedItem = 'Telefone';
+        isPhoneNumberEnabled = true;
         numeroController.text = widget.contato!.numero.toString();
         numeroController.value = numeroController.value.copyWith(
-          text: mascaraTelefone.maskText(widget.contato!.numero.toString()),
+          text: mascaras.mascaraTelefone
+              .maskText(widget.contato!.numero.toString()),
           selection: TextSelection.collapsed(
-            offset: mascaraTelefone
+            offset: mascaras.mascaraTelefone
                 .maskText(widget.contato!.numero.toString())
                 .length,
           ),
@@ -65,11 +70,13 @@ class _ContatoPageState extends State<ContatoPage> {
       } else if (widget.contato!.marcadorNumero == 2) {
         // Celular
         _selectedItem = 'Celular';
+        isPhoneNumberEnabled = true;
         numeroController.text = widget.contato!.numero.toString();
         numeroController.value = numeroController.value.copyWith(
-          text: mascaraCelular.maskText(widget.contato!.numero.toString()),
+          text: mascaras.mascaraCelular
+              .maskText(widget.contato!.numero.toString()),
           selection: TextSelection.collapsed(
-            offset: mascaraCelular
+            offset: mascaras.mascaraCelular
                 .maskText(widget.contato!.numero.toString())
                 .length,
           ),
@@ -81,16 +88,6 @@ class _ContatoPageState extends State<ContatoPage> {
       }
     }
   }
-
-  var mascaraTelefone = MaskTextInputFormatter(
-      mask: '(##) ####-####',
-      filter: {"#": RegExp(r'[0-9]')},
-      type: MaskAutoCompletionType.lazy);
-
-  var mascaraCelular = MaskTextInputFormatter(
-      mask: '(##) 9 ####-####',
-      filter: {"#": RegExp(r'[0-9]')},
-      type: MaskAutoCompletionType.lazy);
 
   cropImage(XFile imageFile) async {
     CroppedFile? croppedFile = await ImageCropper().cropImage(
@@ -105,12 +102,12 @@ class _ContatoPageState extends State<ContatoPage> {
       uiSettings: [
         AndroidUiSettings(
             toolbarTitle: 'Cropper',
-            toolbarColor: Colors.deepOrange,
+            toolbarColor: Colors.deepPurple,
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.original,
             lockAspectRatio: false),
         IOSUiSettings(
-          title: 'Cropper',
+          title: 'Editar imagem',
         ),
       ],
     );
@@ -121,123 +118,201 @@ class _ContatoPageState extends State<ContatoPage> {
     }
   }
 
+  bool isEmail(String texto) {
+    final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    return regex.hasMatch(texto);
+  }
+
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-        child: Scaffold(
-      appBar: AppBar(
-        title: Text(edit ? 'Editar Contato' : 'Criar Contato'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextButton(
-              style: ButtonStyle(
-                backgroundColor: MaterialStateColor.resolveWith(
-                  (Set<MaterialState> states) {
-                    if (states.contains(MaterialState.pressed)) {
-                      return Cor.createMaterialColor(
-                          const Color(0xFFD1C4E9)); //pressionado
-                    }
-                    return Cor.createMaterialColor(
-                        const Color(0xFFB39DDB)); // padrão
-                  },
-                ),
-                fixedSize: MaterialStateProperty.all(const Size(56, 40)),
-                shape: MaterialStateProperty.all(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(edit ? 'Editar Contato' : 'Adicionar Contato'),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: TextButton(
+                style: ButtonStyle(
+                  backgroundColor: MaterialStateColor.resolveWith(
+                    (Set<MaterialState> states) {
+                      if (states.contains(MaterialState.pressed)) {
+                        return Cor.createMaterialColor(const Color(0xFFD1C4E9));
+                      }
+                      return Cor.createMaterialColor(const Color(0xFFB39DDB));
+                    },
+                  ),
+                  fixedSize: MaterialStateProperty.all(const Size(60, 44)),
+                  shape: MaterialStateProperty.all(
+                    RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                   ),
                 ),
-              ),
-              onPressed: () async {
-                setState(() {
-                  contatoModel.nome = nomeController.text;
-                  contatoModel.sobrenome = sobrenomeController.text;
-                  contatoModel.marcadorNumero =
-                      _selectedItem == 'Telefone' ? 1 : 2;
-                  contatoModel.numero = int.parse(
-                      numeroController.text.replaceAll(RegExp(r'[\s()-]'), ''));
-                  contatoModel.email = emailController.text;
-                  contatoModel.foto = (image != null ? image.toString() : "");
-                  if (widget.contato != null) {
-                    contatoModel.objectId = widget.contato!.objectId;
+                onPressed: () async {
+                  if (nomeController.text.isEmpty) {
+                    erro = "O nome é obrigatório";
+                    _buildMsgErro(erro, context);
+                    return;
                   }
-                });
-                if (edit) {
-                  await contatoRepository.atualizar(contatoModel);
-                } else {
-                  await contatoRepository.criar(contatoModel);
-                }
-                Navigator.pop(context);
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const HomePage()));
-              },
-              child: const Text(
-                "Salvar",
-                style: TextStyle(color: Colors.white),
+                  if (_selectedItem == 'Tipo') {
+                    erro = "Você deve selecionar o tipo do número";
+                    _buildMsgErro(erro, context);
+                    return;
+                  }
+                  if (numeroController.text.isEmpty) {
+                    erro = "O número é obrigatório";
+                    _buildMsgErro(erro, context);
+                    return;
+                  }
+                  if (!isEmail(emailController.text)) {
+                    erro = "Email informado não é um email válido";
+                    _buildMsgErro(erro, context);
+                    return;
+                  }
+                  setState(() {
+                    contatoModel.nome = nomeController.text;
+                    contatoModel.sobrenome = sobrenomeController.text;
+                    contatoModel.marcadorNumero =
+                        _selectedItem == 'Telefone' ? 1 : 2;
+                    contatoModel.numero = int.parse(numeroController.text
+                        .replaceAll(RegExp(r'[\s()-]'), ''));
+                    contatoModel.email = emailController.text;
+                    if (image != null) {
+                      contatoModel.foto = image!.path.toString();
+                    }
+                    if (widget.contato != null) {
+                      contatoModel.objectId = widget.contato!.objectId;
+                    } else {
+                      Color cor = Cor.gerarCorAleatoria();
+                      contatoModel.cor = Cor.colorToString(cor);
+                    }
+                  });
+                  if (edit) {
+                    await contatoRepository.atualizar(contatoModel);
+                  } else {
+                    await contatoRepository.criar(contatoModel);
+                  }
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const HomePage()));
+                },
+                child: const Text(
+                  "Salvar",
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                ),
               ),
             ),
-          ),
-        ],
-      ),
-      body: Container(
-        child: Center(
+          ],
+        ),
+        body: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 36),
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 10),
             child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.start, // Centraliza verticalmente
               children: [
-                _buildSelectImage(context),
-                const SizedBox(height: 20),
-                _buildInput("Nome", [], nomeController),
-                const SizedBox(height: 10),
-                _buildInput("Sobrenome", [], sobrenomeController),
-                const SizedBox(height: 10),
-                _buildDropDown(context),
-                const SizedBox(height: 10),
-                _buildInput(
-                    "Número",
-                    [
-                      _selectedItem == 'Telefone'
-                          ? mascaraTelefone
-                          : mascaraCelular,
-                    ],
-                    numeroController),
-                const SizedBox(height: 10),
-                _buildInput("Email", [], emailController),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _buildSelectImage(context),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildInput(
+                          "Nome", [], nomeController, true, Icons.person),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildInput("Sobrenome", [], sobrenomeController,
+                          true, Icons.account_circle),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                _buildDropDown(context, Icons.numbers),
+                const SizedBox(height: 40),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildInput(
+                        "Número",
+                        [
+                          _selectedItem == 'Telefone'
+                              ? mascaras.mascaraTelefone
+                              : mascaras.mascaraCelular,
+                        ],
+                        numeroController,
+                        isPhoneNumberEnabled,
+                        Icons.phone,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 40),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildInput(
+                          "Email", [], emailController, true, Icons.email),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
         ),
       ),
-    ));
+    );
   }
 
   Widget _buildInput(String texto, List<TextInputFormatter>? inputFormaters,
-      TextEditingController controller) {
+      TextEditingController controller, bool enabled, IconData iconData) {
     return Container(
       width: 230,
-      height: 35,
-      child: TextField(
-        controller: controller,
-        inputFormatters: inputFormaters,
-        cursorColor: Colors.black,
-        decoration: InputDecoration(
-            labelText: texto, // Rótulo flutuante
-            labelStyle: const TextStyle(
-              color: Colors.black38,
+      height: 55,
+      child: Row(
+        children: [
+          Icon(iconData, color: Colors.deepPurple),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              enabled: enabled,
+              controller: controller,
+              inputFormatters: inputFormaters,
+              cursorColor: Colors.black,
+              decoration: InputDecoration(
+                labelText: texto, // Rótulo flutuante
+                labelStyle: const TextStyle(
+                  color: Colors.black38,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Cor.createMaterialColor(const Color(0xFFBDBDBD)),
+                  ),
+                  borderRadius: BorderRadius.circular(35.0),
+                ),
+                border: OutlineInputBorder(
+                  borderSide: BorderSide(
+                    color: Cor.createMaterialColor(const Color(0xFFBDBDBD)),
+                  ),
+                  borderRadius: BorderRadius.circular(35.0),
+                ),
+              ),
             ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                  color: Cor.createMaterialColor(const Color(0xFFBDBDBD))),
-              borderRadius: BorderRadius.circular(25.0),
-            ),
-            border: OutlineInputBorder(
-              borderSide: BorderSide(
-                  color: Cor.createMaterialColor(const Color(0xFFBDBDBD))),
-              borderRadius: BorderRadius.circular(25.0),
-            )),
+          ),
+        ],
       ),
     );
   }
@@ -261,14 +336,14 @@ class _ContatoPageState extends State<ContatoPage> {
                       if (image != null) {
                         String path = (await path_provider
                                 .getApplicationDocumentsDirectory())
-                            .toString();
+                            .path;
+                        String name = basename(image.path);
+                        String fullPath = '$path/$name';
+                        await File(image.path).copy(fullPath);
 
-                        String name = basename(image!.path);
-                        await image!.saveTo("$path/$name");
-                        await GallerySaver.saveImage(image!.path);
                         Navigator.pop(context);
                         //setState(() {});
-                        cropImage(image!);
+                        cropImage(image);
                       }
                     },
                   ),
@@ -292,25 +367,27 @@ class _ContatoPageState extends State<ContatoPage> {
       child: Column(
         children: [
           Container(
-            width: 90,
-            height: 90,
+            width: 120,
+            height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Cor.createMaterialColor(const Color(0xFFD1C4E9)),
             ),
             child: Center(
-              child: image.toString() != ""
-                  ? Container(
-                      width: 40,
-                      height: 40,
-                      child:
-                          Text("TEste") /*Image.file(File(image.toString()))*/,
+              child: image != null
+                  ? ClipOval(
+                      child: Image.file(
+                        File(image!.path.toString()),
+                        fit: BoxFit.cover,
+                        width: 120,
+                        height: 120,
+                      ),
                     )
                   : const Padding(
                       padding: EdgeInsets.all(8.0),
                       child: Icon(
                         Icons.add_a_photo_rounded,
-                        size: 40,
+                        size: 60,
                         color: Colors.white,
                       ),
                     ),
@@ -328,39 +405,59 @@ class _ContatoPageState extends State<ContatoPage> {
     );
   }
 
-  Widget _buildDropDown(BuildContext context) {
-    return Container(
-      width: 230,
-      height: 35,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(25.0),
-        border: Border.all(
-          color: Cor.createMaterialColor(const Color(0xFFBDBDBD)),
-        ),
-      ),
-      child: DropdownButton<String>(
-        value: _selectedItem,
-        onChanged: (String? newValue) {
-          setState(() {
-            _selectedItem = newValue!;
-          });
-        },
-        icon: const Icon(Icons.arrow_drop_down),
-        isExpanded: true,
-        underline: Container(),
-        items: <String>['Selecione', 'Telefone', 'Celular'].map((String value) {
-          return DropdownMenuItem<String>(
-            value: value,
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Text(
-                value,
-                style: const TextStyle(color: Colors.black, fontSize: 14),
-              ),
+  _buildMsgErro(String erro, BuildContext context) {
+    if (erro != "") {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(erro)));
+    }
+  }
+
+  Widget _buildDropDown(BuildContext context, IconData iconData) {
+    return Row(
+      children: [
+        Icon(iconData, color: Colors.deepPurple),
+        const SizedBox(width: 10),
+        Container(
+          width: 317,
+          height: 55,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(35.0),
+            border: Border.all(
+              color: Cor.createMaterialColor(const Color(0xFFBDBDBD)),
             ),
-          );
-        }).toList(),
-      ),
+          ),
+          child: DropdownButton<String>(
+            value: _selectedItem,
+            onChanged: (String? newValue) {
+              setState(() {
+                _selectedItem = newValue!;
+                if (_selectedItem == 'Telefone' || _selectedItem == 'Celular') {
+                  isPhoneNumberEnabled = true;
+                }
+              });
+            },
+            icon: const Icon(Icons.arrow_drop_down),
+            isExpanded: true,
+            underline: Container(),
+            items: <String>['Tipo', 'Telefone', 'Celular'].map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      Text(
+                        value,
+                        style:
+                            const TextStyle(color: Colors.black, fontSize: 18),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
     );
   }
 }

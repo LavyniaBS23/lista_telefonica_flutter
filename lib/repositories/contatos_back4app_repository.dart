@@ -5,7 +5,7 @@ class ContatosBack4AppRepository {
   final _customDio = Back4AppCustomDio();
 
   ContatosBack4AppRepository();
-  Future<ContatosModel> obterContatos(bool favoritos) async {
+  Future<ContatosModel> obterContatos(bool favoritos, bool ordem) async {
     var url = "/contatos";
 
     if (favoritos) {
@@ -14,13 +14,21 @@ class ContatosBack4AppRepository {
 
     var result = await _customDio.dio.get(url);
 
-    return ContatosModel.fromJson(result.data);
+    var contatosModel = ContatosModel.fromJson(result.data);
+
+    if(ordem){
+      contatosModel.contatos.sort((b, a) => a.nome.toUpperCase().compareTo(b.nome.toUpperCase()));
+    }else{
+      contatosModel.contatos.sort((a, b) => a.nome.toUpperCase().compareTo(b.nome.toUpperCase()));
+    }
+    
+    return contatosModel;
   }
 
   Future<void> criar(ContatoModel contatoModel) async {
     try {
-      var response =
-          await _customDio.dio.post("/contatos", data: contatoModel.toJsonEndPoint());
+      var response = await _customDio.dio
+          .post("/contatos", data: contatoModel.toJsonEndPoint());
     } catch (e) {
       throw e;
     }
