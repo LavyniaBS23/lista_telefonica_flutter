@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:lista_telefonica/models/contatos_model.dart';
 import 'package:lista_telefonica/repositories/back4app_custom_dio.dart';
 
@@ -15,13 +16,15 @@ class ContatosBack4AppRepository {
     var result = await _customDio.dio.get(url);
 
     var contatosModel = ContatosModel.fromJson(result.data);
-
-    if(ordem){
-      contatosModel.contatos.sort((b, a) => a.nome.toUpperCase().compareTo(b.nome.toUpperCase()));
-    }else{
-      contatosModel.contatos.sort((a, b) => a.nome.toUpperCase().compareTo(b.nome.toUpperCase()));
+    if (contatosModel.contatos.isNotEmpty) {
+      if (ordem) {
+        contatosModel.contatos.sort(
+            (b, a) => a.nome.toUpperCase().compareTo(b.nome.toUpperCase()));
+      } else {
+        contatosModel.contatos.sort(
+            (a, b) => a.nome.toUpperCase().compareTo(b.nome.toUpperCase()));
+      }
     }
-    
     return contatosModel;
   }
 

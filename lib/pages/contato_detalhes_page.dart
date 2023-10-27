@@ -10,8 +10,10 @@ import 'package:lista_telefonica/mascaras.dart';
 
 class ContatoDetalhesPage extends StatefulWidget {
   final String objectId;
+  final String cor;
 
-  const ContatoDetalhesPage({Key? key, required this.objectId})
+  const ContatoDetalhesPage(
+      {Key? key, required this.objectId, required this.cor})
       : super(key: key);
 
   @override
@@ -23,10 +25,11 @@ class _ContatoDetalhesPageState extends State<ContatoDetalhesPage> {
 
   ContatosBack4AppRepository contatoRepository = ContatosBack4AppRepository();
   var mascaras = Mascaras();
-
+  late Color cor;
   @override
   void initState() {
     super.initState();
+    cor = Cor.stringToColor(widget.cor);
     getContato();
   }
 
@@ -60,7 +63,6 @@ class _ContatoDetalhesPageState extends State<ContatoDetalhesPage> {
                       ),
                       IconButton(
                         onPressed: () async {
-                          Navigator.pop(context);
                           Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -117,13 +119,13 @@ class _ContatoDetalhesPageState extends State<ContatoDetalhesPage> {
             ),
             body: SingleChildScrollView(
               child: Column(children: [
-                 _buildImageContato(),
+                _buildImageContato(),
                 const SizedBox(height: 20),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Row(children: [
                     Text(
-                      contato.nome + contato.sobrenome,
+                      "${contato.nome} ${contato.sobrenome}",
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -215,18 +217,47 @@ class _ContatoDetalhesPageState extends State<ContatoDetalhesPage> {
                 showDialog(
                   context: context,
                   builder: (context) {
-                    return Container(
-                      color: Colors.black,
-                      width: double.infinity,
-                      child: Image.file(File(contato.foto.toString()),
-                          fit: BoxFit.contain),
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: Container(
+                        color: Colors.black,
+                        child: Center(
+                          child: Container(
+                            color: Colors.black,
+                            width: double.infinity,
+                            child: Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                InteractiveViewer(
+                                  child: Image.file(File(contato.foto.toString()),
+                                      fit: BoxFit.contain),
+                                ),
+                                Positioned(
+                                  left: 10,
+                                  top:
+                                      500, // Ajuste a posição vertical do texto conforme necessário
+                                  child: Text(
+                                    "${contato.nome} ${contato.sobrenome}",
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        decoration: TextDecoration.none),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
                     );
                   },
                 );
               },
             )
           : Container(
-              color: Cor.stringToColor(contato.cor),
+              color: cor,
               child: Center(
                 child: Text(
                   primeiraLetra,
