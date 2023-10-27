@@ -124,10 +124,8 @@ class _ContatoPageState extends State<ContatoPage> {
 
   insertOrUpdate() async {
     if (edit == true) {
-      debugPrint("clica3");
       await contatoRepository.atualizar(contatoModel);
     } else {
-      debugPrint("clica4");
       await contatoRepository.criar(contatoModel);
       //await contatoRepository.obterContatos(false, false);
     }
@@ -160,7 +158,7 @@ class _ContatoPageState extends State<ContatoPage> {
                   ),
                 ),
                 onPressed: () {
-                  debugPrint("clica");
+
                   if (nomeController.text.isEmpty) {
                     erro = "O nome é obrigatório";
                     _buildMsgErro(erro, context);
@@ -181,7 +179,6 @@ class _ContatoPageState extends State<ContatoPage> {
                     _buildMsgErro(erro, context);
                     return;
                   }
-                  debugPrint("clica2");
                   setState(() {
                     contatoModel.nome = nomeController.text;
                     contatoModel.sobrenome = sobrenomeController.text;
