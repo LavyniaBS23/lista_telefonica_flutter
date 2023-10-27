@@ -24,6 +24,7 @@ class _HomePageState extends State<HomePage> {
 
   bool favoritos = false;
   bool ordem = false;
+  bool pesquisa = false;
 
   @override
   void initState() {
@@ -34,7 +35,10 @@ class _HomePageState extends State<HomePage> {
 
   void obterContatos() async {
     _contatos = await contatoRepository.obterContatos(favoritos, ordem);
-    setState(() {});
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   void pesquisarContatos(String query) {
@@ -50,6 +54,7 @@ class _HomePageState extends State<HomePage> {
         contatosFiltrados.contatos.add(contato);
       }
     }
+
     setState(() {});
   }
 
@@ -60,7 +65,6 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         actions: [
           Expanded(
-            //width: 400,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
               child: Row(
@@ -69,6 +73,9 @@ class _HomePageState extends State<HomePage> {
                     child: TextField(
                       controller: searchController,
                       onChanged: (value) {
+                        if (!pesquisa) {
+                          pesquisa = true;
+                        }
                         pesquisarContatos(value);
                       },
                       decoration: InputDecoration(
@@ -87,11 +94,15 @@ class _HomePageState extends State<HomePage> {
                             borderSide:
                                 BorderSide.none, // Remove a borda padrão
                           ),
-                          prefixIcon: Icon(Icons.search, color: Cor.createMaterialColor(
-                              const Color(0xFFD1C4E9)),),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: Cor.createMaterialColor(
+                                const Color(0xFFD1C4E9)),
+                          ),
                           suffixIcon: IconButton(
-                            icon: Icon(Icons
-                                .clear, color: Cor.createMaterialColor(const Color(0xFFD1C4E9))), // Ícone para limpar o campo de pesquisa
+                            icon: Icon(Icons.clear,
+                                color: Cor.createMaterialColor(const Color(
+                                    0xFFD1C4E9))), // Ícone para limpar o campo de pesquisa
                             onPressed: () {
                               searchController
                                   .clear(); // Limpa o campo de pesquisa
@@ -103,7 +114,8 @@ class _HomePageState extends State<HomePage> {
                   IconButton(
                     onPressed: () async {
                       ordem = !ordem;
-                      _contatos = await contatoRepository.obterContatos(favoritos, ordem);
+                      _contatos = await contatoRepository.obterContatos(
+                          favoritos, ordem);
                       setState(() {});
                     },
                     icon: Icon(
@@ -115,8 +127,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                   IconButton(
                     onPressed: () async {
-                      ordem = !favoritos;
-                      _contatos = await contatoRepository.obterContatos(favoritos, ordem);
+                      favoritos = !favoritos;
+                      _contatos = await contatoRepository.obterContatos(
+                          favoritos, ordem);
                       setState(() {});
                     },
                     icon: Icon(
@@ -136,17 +149,19 @@ class _HomePageState extends State<HomePage> {
           backgroundColor: Colors.deepPurple[200],
           child: const Icon(Icons.add),
           onPressed: () {
-            Navigator.push(context,
-                MaterialPageRoute(builder: (context) => const ContatoPage()));
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ContatoPage()),
+            ).then((value) {
+              obterContatos();
+            });
           }),
       body: Container(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Column(children: [
             Expanded(
-              child: _buildList(contatosFiltrados.contatos.isNotEmpty
-                  ? contatosFiltrados
-                  : _contatos),
+              child: _buildList(pesquisa ? contatosFiltrados : _contatos),
             )
           ]),
         ),
@@ -155,12 +170,29 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildList(ContatosModel lista) {
+    if (lista.contatos.isEmpty && pesquisa) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              "Ops, nenhum resultado encontrado ",
+              style: TextStyle(fontSize: 18),
+            ),
+            SizedBox(height: 10),
+            Text(
+              "\u{1F615}",
+              style: TextStyle(fontSize: 20),
+            ),
+          ],
+        ),
+      );
+    }
     return ListView.builder(
       itemCount: lista.contatos.length,
       itemBuilder: (context, index) {
         final contato = lista.contatos[index];
         final primeiraLetra = contato.nome.substring(0, 1);
-
         return ListTile(
           key: Key(contato.objectId),
           onTap: () {
@@ -168,47 +200,42 @@ class _HomePageState extends State<HomePage> {
             Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) =>
-                        ContatoDetalhesPage(objectId: contato.objectId)));
+                    builder: (context) => ContatoDetalhesPage(
+                        objectId: contato.objectId, cor: contato.cor)));
           },
           leading: ClipOval(
-            child: contato.foto != ""
-                ? Container(
-                    width: 55,
-                    height: 55,
-                    child: Image.file(
-                      File(contato.foto),
-                      fit: BoxFit.cover, 
+              child: contato.foto != ""
+                  ? Container(
+                      width: 55,
+                      height: 55,
+                      child: Image.file(
+                        File(contato.foto),
+                        fit: BoxFit.cover,
                         width: 55,
                         height: 55,
                       ),
-                  ):
-                  Container(
-                    color: Cor.stringToColor(contato.cor),
-                    width: 55,
-                    height: 55,
-                    child: Center(
-                      child: Text(
-                        primeiraLetra,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20
+                    )
+                  : Container(
+                      color: Cor.stringToColor(contato.cor),
+                      width: 55,
+                      height: 55,
+                      child: Center(
+                        child: Text(
+                          primeiraLetra,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20),
                         ),
                       ),
-                    ),
-                  )
-                
-          ),
+                    )),
           title: Text(
             "${contato.nome} ${contato.sobrenome}",
-            style: const TextStyle(
-              fontSize: 18
-            ),
+            style: const TextStyle(fontSize: 18),
           ),
-          subtitle: Text(
-            contato.marcadorNumero == 1 ? mascaras.mascaraTelefone.maskText(contato.numero.toString()) : mascaras.mascaraCelular.maskText(contato.numero.toString())
-            ),
+          subtitle: Text(contato.marcadorNumero == 1
+              ? mascaras.mascaraTelefone.maskText(contato.numero.toString())
+              : mascaras.mascaraCelular.maskText(contato.numero.toString())),
         );
       },
     );

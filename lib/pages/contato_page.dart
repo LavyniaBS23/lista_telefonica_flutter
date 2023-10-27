@@ -8,7 +8,6 @@ import 'package:lista_telefonica/cor.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:lista_telefonica/pages/home_page.dart';
 import 'package:lista_telefonica/repositories/contatos_back4app_repository.dart';
 import 'package:path_provider/path_provider.dart' as path_provider;
 import 'package:path/path.dart';
@@ -37,7 +36,7 @@ class _ContatoPageState extends State<ContatoPage> {
   var contatoModel = ContatoModel("", "", "", "", 0, 0, "", "", "", false, "");
   bool isPhoneNumberEnabled = false;
   String erro = "";
-
+  var _contatos = ContatosModel([]);
   var mascaras = Mascaras();
 
   @override
@@ -101,7 +100,7 @@ class _ContatoPageState extends State<ContatoPage> {
       ],
       uiSettings: [
         AndroidUiSettings(
-            toolbarTitle: 'Cropper',
+            toolbarTitle: 'Editar imagem',
             toolbarColor: Colors.deepPurple,
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.original,
@@ -121,6 +120,15 @@ class _ContatoPageState extends State<ContatoPage> {
   bool isEmail(String texto) {
     final regex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     return regex.hasMatch(texto);
+  }
+
+  insertOrUpdate() async {
+    if (edit == true) {
+      await contatoRepository.atualizar(contatoModel);
+    } else {
+      await contatoRepository.criar(contatoModel);
+      //await contatoRepository.obterContatos(false, false);
+    }
   }
 
   @override
@@ -149,7 +157,8 @@ class _ContatoPageState extends State<ContatoPage> {
                     ),
                   ),
                 ),
-                onPressed: () async {
+                onPressed: () {
+
                   if (nomeController.text.isEmpty) {
                     erro = "O nome é obrigatório";
                     _buildMsgErro(erro, context);
@@ -165,7 +174,7 @@ class _ContatoPageState extends State<ContatoPage> {
                     _buildMsgErro(erro, context);
                     return;
                   }
-                  if (!isEmail(emailController.text)) {
+                  if (!isEmail(emailController.text) && emailController.text != "") {
                     erro = "Email informado não é um email válido";
                     _buildMsgErro(erro, context);
                     return;
@@ -181,25 +190,17 @@ class _ContatoPageState extends State<ContatoPage> {
                     if (image != null) {
                       contatoModel.foto = image!.path.toString();
                     }
+                    Color cor = Cor.gerarCorAleatoria();
+                    contatoModel.cor = Cor.colorToString(cor);
                     if (widget.contato != null) {
                       contatoModel.objectId = widget.contato!.objectId;
-                    } else {
-                      Color cor = Cor.gerarCorAleatoria();
-                      contatoModel.cor = Cor.colorToString(cor);
                     }
                   });
-                  if (edit) {
-                    await contatoRepository.atualizar(contatoModel);
-                  } else {
-                    await contatoRepository.criar(contatoModel);
-                  }
+                  insertOrUpdate();
                   Navigator.pop(context);
-                  Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const HomePage()));
                 },
                 child: const Text(
+                  key: Key("salvar"),
                   "Salvar",
                   style: TextStyle(color: Colors.white, fontSize: 16),
                 ),
@@ -223,8 +224,8 @@ class _ContatoPageState extends State<ContatoPage> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: _buildInput(
-                          "Nome", [], nomeController, true, Icons.person),
+                      child: _buildInput("Nome", [], nomeController, true,
+                          Icons.person, "nomeTextField"),
                     ),
                   ],
                 ),
@@ -234,28 +235,28 @@ class _ContatoPageState extends State<ContatoPage> {
                   children: [
                     Expanded(
                       child: _buildInput("Sobrenome", [], sobrenomeController,
-                          true, Icons.account_circle),
+                          true, Icons.account_circle, "sobrenomeTextField"),
                     ),
                   ],
                 ),
                 const SizedBox(height: 40),
-                _buildDropDown(context, Icons.numbers),
+                _buildDropDown(context, Icons.numbers, "dropdownKey"),
                 const SizedBox(height: 40),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Expanded(
                       child: _buildInput(
-                        "Número",
-                        [
-                          _selectedItem == 'Telefone'
-                              ? mascaras.mascaraTelefone
-                              : mascaras.mascaraCelular,
-                        ],
-                        numeroController,
-                        isPhoneNumberEnabled,
-                        Icons.phone,
-                      ),
+                          "Número",
+                          [
+                            _selectedItem == 'Telefone'
+                                ? mascaras.mascaraTelefone
+                                : mascaras.mascaraCelular,
+                          ],
+                          numeroController,
+                          isPhoneNumberEnabled,
+                          Icons.phone,
+                          "numeroTextField"),
                     ),
                   ],
                 ),
@@ -264,8 +265,8 @@ class _ContatoPageState extends State<ContatoPage> {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: _buildInput(
-                          "Email", [], emailController, true, Icons.email),
+                      child: _buildInput("Email", [], emailController, true,
+                          Icons.email, "emailTextField"),
                     ),
                   ],
                 ),
@@ -277,8 +278,13 @@ class _ContatoPageState extends State<ContatoPage> {
     );
   }
 
-  Widget _buildInput(String texto, List<TextInputFormatter>? inputFormaters,
-      TextEditingController controller, bool enabled, IconData iconData) {
+  Widget _buildInput(
+      String texto,
+      List<TextInputFormatter>? inputFormaters,
+      TextEditingController controller,
+      bool enabled,
+      IconData iconData,
+      String key) {
     return Container(
       width: 230,
       height: 55,
@@ -288,6 +294,7 @@ class _ContatoPageState extends State<ContatoPage> {
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
+              key: Key(key),
               enabled: enabled,
               controller: controller,
               inputFormatters: inputFormaters,
@@ -411,7 +418,7 @@ class _ContatoPageState extends State<ContatoPage> {
     }
   }
 
-  Widget _buildDropDown(BuildContext context, IconData iconData) {
+  Widget _buildDropDown(BuildContext context, IconData iconData, String key) {
     return Row(
       children: [
         Icon(iconData, color: Colors.deepPurple),
@@ -426,6 +433,7 @@ class _ContatoPageState extends State<ContatoPage> {
             ),
           ),
           child: DropdownButton<String>(
+            key: Key(key),
             value: _selectedItem,
             onChanged: (String? newValue) {
               setState(() {
